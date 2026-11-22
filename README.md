@@ -50,7 +50,7 @@ flowchart LR
 ## Quick start (Google Colab, free T4 GPU)
 
 ```bash
-git clone <this-repo-url> && cd affective-support-agent
+git clone https://github.com/Yasar004/parcelgo-affective-support && cd affective-support-agent
 pip install -r requirements.txt
 
 # 1. Put twcs.csv (from Kaggle) in data/, then build the dataset
