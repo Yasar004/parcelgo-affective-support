@@ -49,19 +49,25 @@ flowchart LR
 
 ## Quick start (Google Colab, free T4 GPU)
 
+These are the exact commands used for the results below.
+
 ```bash
-git clone https://github.com/Yasar004/parcelgo-affective-support && cd affective-support-agent
+git clone https://github.com/Yasar004/parcelgo-affective-support.git
+cd parcelgo-affective-support
 pip install -r requirements.txt
 
-# 1. Put twcs.csv (from Kaggle) in data/, then build the dataset
-python -m src.prepare_data --twcs data/twcs.csv --out data/processed --device 0
+# 1. Put twcs.csv (from Kaggle) in data/, then build the dataset.
+#    Sarcasm is rare (~2% of complaints), so the other classes are capped at 600
+#    and sarcastic training examples are repeated 3x (train split only).
+python -m src.prepare_data --twcs data/twcs.csv --out data/processed --device cuda:0 \
+    --per-class 600 --oversample-sarcastic 3
 
-# 2. Finetune (about 30-60 min on a T4 with the defaults)
+# 2. Finetune (about 17 min on a T4)
 python -m src.train_lora --data data/processed --out outputs/support-lora
 
-# 3. Compare base vs finetuned
+# 3. Compare base vs finetuned (hand-written scenarios, then the held-out test split)
 python -m src.evaluate --adapter outputs/support-lora/final --set scenarios
-python -m src.evaluate --adapter outputs/support-lora/final --set test --limit 200
+python -m src.evaluate --adapter outputs/support-lora/final --set test
 
 # 4. Live demo
 python -m src.demo --adapter outputs/support-lora/final            # terminal
@@ -69,7 +75,42 @@ python -m src.demo --adapter outputs/support-lora/final --gradio   # web UI with
 ```
 
 For a fast dry run without downloading the classifier models, use
-`--labeler heuristic --max-candidates 5000` in step 1.
+`--labeler heuristic --max-candidates 3000 --per-class 50` in step 1 and
+`--epochs 1` in step 2. The notebook `notebooks/run_on_colab.ipynb` contains
+the same steps.
+
+**Older GPUs.** Colab's T4 has no native bfloat16. The code detects this and
+trains in float16 with fp32 LoRA weights, and switches TRL's fused loss kernel
+to its fp32 fallback (`src/hardware.py`). Without these changes, current TRL
+and transformers versions crash on a T4.
+
+## Results
+
+Base = Qwen2.5-1.5B-Instruct with the same system prompt; finetuned = the same
+model with the LoRA adapter. Greedy decoding, one run per condition. Raw
+outputs, metrics and rating sheets are in `results/`.
+
+| Metric | Scenarios (n=14): base | Scenarios: finetuned | Test split (n=135): base | Test split: finetuned |
+|---|---|---|---|---|
+| Format compliance | 7% | 100% | 16% | 100% |
+| Affect accuracy | 7% | 93% | 7% | 76% |
+| Sarcasm recall | 0% | 100% | 0% | 87% |
+| Escalation accuracy | 7% | 79% | 13% | 81% |
+| Unauthorised promises | 14% | 0% | 0% | 0% |
+| Unsupported claims | 14% | 0% | 7% | 0% |
+
+Test-split labels are automatic (see limitations), so those scores measure
+agreement with the labeler. The scenarios are hand-labelled.
+
+Main observations:
+
+- Finetuning made affect perception reliable, including sarcasm, but replies
+  became generic ("Please DM us…") and rarely adapt to the detected affect.
+- The base model accepted a prompt-injected refund and invented a compensation
+  policy; the finetuned model did neither, but missed escalating compensation
+  requests (B3, C2, C3).
+- URL removal during cleaning left dangling references ("shown here: ?") in
+  some finetuned replies, and "DM us" refers to a channel ParcelGo does not have.
 
 ## Repository structure
 
@@ -132,6 +173,11 @@ rules.
 - **Language.** Training data is English. The Dutch crash test probes transfer.
 - **Small model.** 1.5B parameters keep training cheap but limit reasoning about
   context-dependent irony.
+- **Rare sarcasm.** Only ~2% of filtered complaints were labelled sarcastic.
+  Repeating them in training risks memorisation; genuine thanks (scenario B4)
+  was misread as sarcasm.
+- **Dangling links.** Removing URLs from company replies left references such as
+  "shown here: ?" that the model learned to reproduce.
 
 ## Reproducibility
 
