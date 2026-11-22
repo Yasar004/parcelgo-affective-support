@@ -1,0 +1,14 @@
+# Core (tested against these versions; Colab already ships torch)
+torch>=2.6
+transformers>=5.0
+peft>=0.15
+trl>=1.0
+datasets>=4.7
+accelerate>=1.11
+bitsandbytes>=0.45   # 4-bit QLoRA; needs a CUDA GPU
+pandas>=2.1
+scikit-learn>=1.4
+
+# Demo and tests
+gradio>=6.0
+pytest>=8.0

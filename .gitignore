@@ -1,0 +1,6 @@
+data/twcs.csv
+data/processed/
+outputs/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
