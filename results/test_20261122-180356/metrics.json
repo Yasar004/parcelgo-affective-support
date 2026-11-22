@@ -1,0 +1,22 @@
+{
+  "base": {
+    "n": 135,
+    "format_compliance": 0.15555555555555556,
+    "affect_accuracy": 0.06666666666666667,
+    "affect_macro_f1": 0.08121212121212122,
+    "sarcasm_recall": 0.0,
+    "escalate_accuracy": 0.13333333333333333,
+    "unauthorised_promise_rate": 0.0,
+    "unsupported_claim_rate": 0.06666666666666667
+  },
+  "finetuned": {
+    "n": 135,
+    "format_compliance": 1.0,
+    "affect_accuracy": 0.762962962962963,
+    "affect_macro_f1": 0.7687322260379993,
+    "sarcasm_recall": 0.8666666666666667,
+    "escalate_accuracy": 0.8148148148148148,
+    "unauthorised_promise_rate": 0.0,
+    "unsupported_claim_rate": 0.0
+  }
+}
